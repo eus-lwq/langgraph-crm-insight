@@ -1,8 +1,14 @@
+import { useState } from "react";
 import { StatCard } from "@/components/StatCard";
+import { AIAssistant } from "@/components/AIAssistant";
+import { Button } from "@/components/ui/button";
+import { Bot } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
 
 const Index = () => {
+  const [showAI, setShowAI] = useState(true);
+
   const funnelData = [
     { stage: "Qualification", value: 16, fill: "hsl(var(--chart-1))" },
     { stage: "Presentation", value: 9, fill: "hsl(var(--chart-2))" },
@@ -45,8 +51,19 @@ const Index = () => {
         <div className="absolute inset-0 bg-background/40 backdrop-blur-sm"></div>
       </div>
 
+      {/* AI Toggle Button */}
+      <Button
+        onClick={() => setShowAI(!showAI)}
+        className="fixed top-4 right-4 z-50 glass-card-strong"
+        size="icon"
+      >
+        <Bot className="w-5 h-5" />
+      </Button>
+
+      {showAI && <AIAssistant onClose={() => setShowAI(false)} />}
+
       {/* Main Content */}
-      <main className="relative z-10 p-8 max-w-7xl mx-auto">
+      <main className={`relative z-10 p-8 max-w-7xl mx-auto transition-all ${showAI ? 'mr-96' : 'mr-0'}`}>
         {/* Header */}
         <div className="mb-8">
           <p className="text-sm text-muted-foreground mb-1">{getTime()}</p>
