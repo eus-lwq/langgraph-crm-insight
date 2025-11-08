@@ -269,7 +269,6 @@ const Index = () => {
           <TabsList className="glass-card mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="interactions">Interactions Data</TabsTrigger>
-            <TabsTrigger value="emails">Emails</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -435,9 +434,10 @@ const Index = () => {
               </div>
             </div>
 
-            {/* Calendar Section */}
+            {/* Calendar and Emails Section */}
             <div className="grid grid-cols-3 gap-6">
-              <div className="glass-card p-6 rounded-xl col-span-2">
+              {/* Calendar - narrower */}
+              <div className="glass-card p-6 rounded-xl">
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <CalendarIcon className="w-5 h-5 text-primary" />
                   Calendar
@@ -458,48 +458,86 @@ const Index = () => {
                     }
                   }}
                 />
+                
+                {/* Events for Selected Date - moved here */}
+                <div className="mt-6">
+                  <h3 className="text-sm font-semibold mb-3">
+                    {selectedDate ? (
+                      <>Events on {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                    ) : (
+                      'Select a date'
+                    )}
+                  </h3>
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                    {selectedDate && getEventsForDate(selectedDate).length > 0 ? (
+                      getEventsForDate(selectedDate).map((event, idx) => (
+                        <Card key={idx} className="bg-background/30 border-glass-border/30">
+                          <CardContent className="p-3">
+                            <div className="flex items-start gap-2">
+                              {event.type === 'email' ? (
+                                <Mail className="w-3 h-3 text-primary mt-0.5" />
+                              ) : (
+                                <Phone className="w-3 h-3 text-primary mt-0.5" />
+                              )}
+                              <div className="flex-1">
+                                <p className="font-medium text-xs">{event.title}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{event.contact}</p>
+                                <p className="text-xs text-muted-foreground">{event.company}</p>
+                                {event.type === 'interaction' && (
+                                  <p className="text-xs font-semibold text-primary mt-1">
+                                    ${((event as any).value / 1000).toFixed(0)}k
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        No events for this date
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Events for Selected Date */}
-              <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">
-                  {selectedDate ? (
-                    <>Events on {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
-                  ) : (
-                    'Select a date'
-                  )}
+              {/* Emails Section - moved from tab */}
+              <div className="col-span-2 space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-primary" />
+                  Recent Emails
                 </h3>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                  {selectedDate && getEventsForDate(selectedDate).length > 0 ? (
-                    getEventsForDate(selectedDate).map((event, idx) => (
-                      <Card key={idx} className="bg-background/30 border-glass-border/30">
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-2 mb-2">
-                            {event.type === 'email' ? (
-                              <Mail className="w-4 h-4 text-primary mt-0.5" />
-                            ) : (
-                              <Phone className="w-4 h-4 text-primary mt-0.5" />
-                            )}
-                            <div className="flex-1">
-                              <p className="font-medium text-sm">{event.title}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{event.contact}</p>
-                              <p className="text-xs text-muted-foreground">{event.company}</p>
-                              {event.type === 'interaction' && (
-                                <p className="text-xs font-semibold text-primary mt-2">
-                                  ${((event as any).value / 1000).toFixed(0)}k
-                                </p>
-                              )}
-                            </div>
+                {emailsData.map((email) => (
+                  <Card key={email.id} className="glass-card border-glass-border/30">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold mb-2">{email.subject}</CardTitle>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Mail className="w-4 h-4" />
+                            <span className="font-medium">{email.from}</span>
+                            <span className="text-xs">&lt;{email.email}&gt;</span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      No events scheduled for this date
-                    </p>
-                  )}
-                </div>
+                        </div>
+                        <div className="text-right text-sm text-muted-foreground">
+                          <p>{email.time}</p>
+                          <p className="text-xs">({email.timeAgo})</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mb-3">
+                        <Badge variant="secondary" className="text-xs">
+                          {email.company}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
+                        {email.body}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           </TabsContent>
@@ -567,40 +605,6 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="emails">
-            <div className="space-y-4">
-              {emailsData.map((email) => (
-                <Card key={email.id} className="glass-card border-glass-border/30">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold mb-2">{email.subject}</CardTitle>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Mail className="w-4 h-4" />
-                          <span className="font-medium">{email.from}</span>
-                          <span className="text-xs">&lt;{email.email}&gt;</span>
-                        </div>
-                      </div>
-                      <div className="text-right text-sm text-muted-foreground">
-                        <p>{email.time}</p>
-                        <p className="text-xs">({email.timeAgo})</p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="mb-3">
-                      <Badge variant="secondary" className="text-xs">
-                        {email.company}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
-                      {email.body}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
 
         </Tabs>
       </main>
