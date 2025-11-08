@@ -6,7 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Bot, Filter } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Bot, Filter, Users, DollarSign, Building2, Calendar } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
 
@@ -68,20 +70,30 @@ const Index = () => {
     }
   ];
 
-  const funnelData = [
-    { stage: "Qualification", value: 16, fill: "hsl(var(--chart-1))" },
-    { stage: "Presentation", value: 9, fill: "hsl(var(--chart-2))" },
-    { stage: "Proposal", value: 6, fill: "hsl(var(--chart-3))" },
-    { stage: "Contracting", value: 3, fill: "hsl(var(--chart-4))" },
-    { stage: "Closed won", value: 1, fill: "hsl(var(--chart-5))" },
-  ];
+  // Calculate metrics from interactions data
+  const totalCustomers = interactionsData.length;
+  const totalDealValue = interactionsData.reduce((sum, item) => sum + item.deal_value, 0);
+  
+  // Company distribution data
+  const companyDistribution = interactionsData.reduce((acc, item) => {
+    const existing = acc.find(c => c.company === item.company);
+    if (existing) {
+      existing.count += 1;
+      existing.value += item.deal_value;
+    } else {
+      acc.push({ company: item.company, count: 1, value: item.deal_value });
+    }
+    return acc;
+  }, [] as { company: string; count: number; value: number }[]);
 
-  const salesData = [
-    { name: "James Smith", plan: 45000, fact: 52000 },
-    { name: "William Clarke", plan: 55000, fact: 70950 },
-    { name: "Mary King", plan: 60000, fact: 75000 },
-    { name: "Peter Moore", plan: 70000, fact: 90000 },
-  ];
+  // Group by next step for ticket view
+  const nextStepGroups = interactionsData.reduce((acc, item) => {
+    if (!acc[item.next_step]) {
+      acc[item.next_step] = [];
+    }
+    acc[item.next_step].push(item);
+    return acc;
+  }, {} as Record<string, typeof interactionsData>);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -139,52 +151,31 @@ const Index = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-6 mb-8">
               <StatCard
-                title="Total opportunity count"
-                value="463"
+                title="# Customers"
+                value={totalCustomers}
+                icon={Users}
               />
               <StatCard
-                title="Opportunity amount, current m.."
-                value="$ 999,928.00"
+                title="Total Deal Value"
+                value={`$ ${totalDealValue.toLocaleString()}`}
+                icon={DollarSign}
               />
               <StatCard
-                title="# Open leads"
-                value="56"
+                title="Companies"
+                value={companyDistribution.length}
+                icon={Building2}
               />
             </div>
 
-            {/* Charts Grid */}
+            {/* Charts and Views Grid */}
             <div className="grid grid-cols-2 gap-6">
-              {/* Funnel Chart */}
+              {/* Company Distribution Chart */}
               <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">Funnel</h3>
+                <h3 className="text-lg font-semibold mb-4">Company Distribution</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={funnelData} layout="horizontal">
+                  <BarChart data={companyDistribution}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--glass-border))" opacity={0.3} />
-                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis type="category" dataKey="stage" stroke="hsl(var(--muted-foreground))" width={100} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--glass))",
-                        border: "1px solid hsl(var(--glass-border))",
-                        borderRadius: "8px"
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                      {funnelData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Sales Team Performance */}
-              <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">Plan vs Fact by sales team, current quarter</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={salesData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--glass-border))" opacity={0.3} />
-                    <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" />
+                    <XAxis dataKey="company" stroke="hsl(var(--muted-foreground))" angle={-15} textAnchor="end" height={80} />
                     <YAxis stroke="hsl(var(--muted-foreground))" />
                     <Tooltip 
                       contentStyle={{ 
@@ -192,12 +183,50 @@ const Index = () => {
                         border: "1px solid hsl(var(--glass-border))",
                         borderRadius: "8px"
                       }}
+                      formatter={(value: number, name: string) => {
+                        if (name === 'value') return [`$${value.toLocaleString()}`, 'Deal Value'];
+                        return [value, 'Interactions'];
+                      }}
                     />
                     <Legend />
-                    <Bar dataKey="plan" fill="hsl(var(--chart-2))" radius={[8, 8, 0, 0]} />
-                    <Bar dataKey="fact" fill="hsl(var(--chart-1))" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[8, 8, 0, 0]} name="Interactions" />
+                    <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[8, 8, 0, 0]} name="Deal Value" />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+
+              {/* Next Steps - Ticket View */}
+              <div className="glass-card p-6 rounded-xl">
+                <h3 className="text-lg font-semibold mb-4">Next Steps</h3>
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                  {Object.entries(nextStepGroups).map(([step, items]) => (
+                    <Card key={step} className="bg-background/30 border-glass-border/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center justify-between">
+                          <span>{step}</span>
+                          <Badge variant="secondary">{items.length}</Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {items.map((item) => (
+                          <div key={item.id} className="flex items-start justify-between text-xs p-2 rounded bg-background/20">
+                            <div className="flex-1">
+                              <p className="font-medium">{item.contact_name}</p>
+                              <p className="text-muted-foreground">{item.company}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-primary">${(item.deal_value / 1000).toFixed(0)}k</p>
+                              <p className="text-muted-foreground flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(item.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           </TabsContent>
