@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Filter, Users, DollarSign, Building2, Calendar, Mail } from "lucide-react";
+import { Bot, Filter, Users, DollarSign, Building2, Calendar, Mail, Phone } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
 
@@ -128,6 +128,20 @@ const Index = () => {
     acc[item.next_step].push(item);
     return acc;
   }, {} as Record<string, typeof interactionsData>);
+
+  // Communication channels breakdown
+  const communicationChannels = [
+    { 
+      channel: "Email", 
+      count: emailsData.length,
+      percentage: Math.round((emailsData.length / (emailsData.length + interactionsData.length)) * 100)
+    },
+    { 
+      channel: "Voice Call", 
+      count: interactionsData.filter(i => i.interaction_medium === "phone call").length,
+      percentage: Math.round((interactionsData.filter(i => i.interaction_medium === "phone call").length / (emailsData.length + interactionsData.length)) * 100)
+    }
+  ];
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -266,6 +280,37 @@ const Index = () => {
                         ))}
                       </CardContent>
                     </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Communication Channels */}
+              <div className="glass-card p-6 rounded-xl">
+                <h3 className="text-lg font-semibold mb-4">Communication Channels</h3>
+                <div className="space-y-4">
+                  {communicationChannels.map((channel) => (
+                    <div key={channel.channel} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          {channel.channel === "Email" ? (
+                            <Mail className="w-4 h-4 text-primary" />
+                          ) : (
+                            <Phone className="w-4 h-4 text-primary" />
+                          )}
+                          <span className="font-medium">{channel.channel}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-muted-foreground">{channel.count} contacts</span>
+                          <Badge variant="secondary">{channel.percentage}%</Badge>
+                        </div>
+                      </div>
+                      <div className="w-full bg-background/30 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full transition-all"
+                          style={{ width: `${channel.percentage}%` }}
+                        />
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
