@@ -270,7 +270,6 @@ const Index = () => {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="interactions">Interactions Data</TabsTrigger>
             <TabsTrigger value="emails">Emails</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -426,12 +425,80 @@ const Index = () => {
                       </div>
                       <div className="w-full bg-background/30 rounded-full h-2 overflow-hidden">
                         <div 
-                          className="h-full bg-primary rounded-full transition-all"
+                          className="bg-primary h-full rounded-full transition-all"
                           style={{ width: `${channel.percentage}%` }}
                         />
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Calendar Section */}
+            <div className="grid grid-cols-3 gap-6">
+              <div className="glass-card p-6 rounded-xl col-span-2">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <CalendarIcon className="w-5 h-5 text-primary" />
+                  Calendar
+                </h3>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  className="rounded-md border-0"
+                  modifiers={{
+                    hasEvent: eventDates
+                  }}
+                  modifiersStyles={{
+                    hasEvent: {
+                      textDecoration: 'underline',
+                      textDecorationColor: 'hsl(var(--primary))',
+                      textDecorationThickness: '2px'
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Events for Selected Date */}
+              <div className="glass-card p-6 rounded-xl">
+                <h3 className="text-lg font-semibold mb-4">
+                  {selectedDate ? (
+                    <>Events on {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                  ) : (
+                    'Select a date'
+                  )}
+                </h3>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  {selectedDate && getEventsForDate(selectedDate).length > 0 ? (
+                    getEventsForDate(selectedDate).map((event, idx) => (
+                      <Card key={idx} className="bg-background/30 border-glass-border/30">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-2 mb-2">
+                            {event.type === 'email' ? (
+                              <Mail className="w-4 h-4 text-primary mt-0.5" />
+                            ) : (
+                              <Phone className="w-4 h-4 text-primary mt-0.5" />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{event.title}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{event.contact}</p>
+                              <p className="text-xs text-muted-foreground">{event.company}</p>
+                              {event.type === 'interaction' && (
+                                <p className="text-xs font-semibold text-primary mt-2">
+                                  ${((event as any).value / 1000).toFixed(0)}k
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No events scheduled for this date
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -535,73 +602,6 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="calendar">
-            <div className="grid grid-cols-3 gap-6">
-              {/* Calendar */}
-              <div className="col-span-2 glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">Event Calendar</h3>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  className="rounded-md border border-glass-border/30"
-                  modifiers={{
-                    hasEvent: eventDates
-                  }}
-                  modifiersStyles={{
-                    hasEvent: {
-                      fontWeight: 'bold',
-                      textDecoration: 'underline',
-                      textDecorationColor: 'hsl(var(--primary))',
-                      textDecorationThickness: '2px'
-                    }
-                  }}
-                />
-              </div>
-
-              {/* Events for Selected Date */}
-              <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">
-                  {selectedDate 
-                    ? selectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                    : 'Select a date'}
-                </h3>
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-                  {selectedDate && getEventsForDate(selectedDate).length > 0 ? (
-                    getEventsForDate(selectedDate).map((event, index) => (
-                      <Card key={index} className="bg-background/30 border-glass-border/30">
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            {event.type === 'email' ? (
-                              <Mail className="w-4 h-4 text-chart-1 mt-1 flex-shrink-0" />
-                            ) : (
-                              <Phone className="w-4 h-4 text-chart-2 mt-1 flex-shrink-0" />
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm mb-1 truncate">{event.title}</p>
-                              <p className="text-xs text-muted-foreground mb-1">{event.contact}</p>
-                              <Badge variant="secondary" className="text-xs">
-                                {event.company}
-                              </Badge>
-                              {event.value && (
-                                <p className="text-xs font-semibold text-primary mt-2">
-                                  ${(event.value / 1000).toFixed(0)}k
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      {selectedDate ? 'No events on this date' : 'Select a date to view events'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
         </Tabs>
       </main>
     </div>
