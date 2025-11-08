@@ -36,7 +36,7 @@ export const AIAssistant = ({ onClose }: AIAssistantProps) => {
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center">
               <span className="text-xs font-bold">ai</span>
             </div>
-            <span className="font-semibold">Creatio.ai</span>
+            <span className="font-semibold">CRM-agent.ai</span>
           </div>
         </div>
         {onClose && (
