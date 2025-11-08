@@ -10,7 +10,7 @@ export const TopBar = ({ onAIClick }: TopBarProps) => {
     <header className="fixed top-0 left-40 right-0 h-14 glass-card-strong border-b border-glass-border/30 z-40 px-6">
       <div className="flex items-center justify-between h-full">
         <div className="flex items-center gap-4">
-          <span className="font-semibold">Creatio</span>
+          <span className="font-semibold">CRM-agent</span>
           <Button variant="ghost" size="icon" className="w-8 h-8">
             <span className="text-lg">▶</span>
           </Button>
