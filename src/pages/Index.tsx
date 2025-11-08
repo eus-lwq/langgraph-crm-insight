@@ -337,42 +337,10 @@ const Index = () => {
 
             {/* Charts and Views Grid */}
             <div className="grid grid-cols-2 gap-6">
-              {/* Company Distribution Chart */}
-              <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">Company Distribution</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={companyDistribution}
-                      dataKey="value"
-                      nameKey="company"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label={({ company, value }) => `${company}: $${(value / 1000).toFixed(0)}k`}
-                      labelLine={true}
-                    >
-                      {companyDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--glass))",
-                        border: "1px solid hsl(var(--glass-border))",
-                        borderRadius: "8px"
-                      }}
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, 'Deal Value']}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Next Steps - Ticket View */}
+              {/* Next Steps - Ticket View (Taller) */}
               <div className="glass-card p-6 rounded-xl">
                 <h3 className="text-lg font-semibold mb-4">Next Steps</h3>
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[650px] overflow-y-auto pr-2">
                   {Object.entries(nextStepGroups).map(([step, items]) => (
                     <Card key={step} className="bg-background/30 border-glass-border/30">
                       <CardHeader className="pb-3">
@@ -403,34 +371,69 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Communication Channels */}
-              <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">Communication Channels</h3>
-                <div className="space-y-4">
-                  {communicationChannels.map((channel) => (
-                    <div key={channel.channel} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          {channel.channel === "Email" ? (
-                            <Mail className="w-4 h-4 text-primary" />
-                          ) : (
-                            <Phone className="w-4 h-4 text-primary" />
-                          )}
-                          <span className="font-medium">{channel.channel}</span>
+              {/* Right Column: Company Distribution and Communication Channels */}
+              <div className="space-y-6">
+                {/* Company Distribution Chart */}
+                <div className="glass-card p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-4">Company Distribution</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={companyDistribution}
+                        dataKey="value"
+                        nameKey="company"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        label={({ company, value }) => `${company}: $${(value / 1000).toFixed(0)}k`}
+                        labelLine={true}
+                      >
+                        {companyDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--glass))",
+                          border: "1px solid hsl(var(--glass-border))",
+                          borderRadius: "8px"
+                        }}
+                        formatter={(value: number) => [`$${value.toLocaleString()}`, 'Deal Value']}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Communication Channels */}
+                <div className="glass-card p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-4">Communication Channels</h3>
+                  <div className="space-y-4">
+                    {communicationChannels.map((channel) => (
+                      <div key={channel.channel} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            {channel.channel === "Email" ? (
+                              <Mail className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Phone className="w-4 h-4 text-primary" />
+                            )}
+                            <span className="font-medium">{channel.channel}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-muted-foreground">{channel.count} contacts</span>
+                            <Badge variant="secondary">{channel.percentage}%</Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-muted-foreground">{channel.count} contacts</span>
-                          <Badge variant="secondary">{channel.percentage}%</Badge>
+                        <div className="w-full bg-background/30 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="bg-primary h-full rounded-full transition-all"
+                            style={{ width: `${channel.percentage}%` }}
+                          />
                         </div>
                       </div>
-                      <div className="w-full bg-background/30 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className="bg-primary h-full rounded-full transition-all"
-                          style={{ width: `${channel.percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
