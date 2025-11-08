@@ -337,10 +337,10 @@ const Index = () => {
 
             {/* Charts and Views Grid */}
             <div className="grid grid-cols-2 gap-6">
-              {/* Next Steps - Ticket View (Taller) */}
-              <div className="glass-card p-6 rounded-xl">
+              {/* Next Steps - Ticket View (Full height) */}
+              <div className="glass-card p-6 rounded-xl flex flex-col">
                 <h3 className="text-lg font-semibold mb-4">Next Steps</h3>
-                <div className="space-y-3 max-h-[650px] overflow-y-auto pr-2">
+                <div className="space-y-3 overflow-y-auto pr-2 flex-1">
                   {Object.entries(nextStepGroups).map(([step, items]) => (
                     <Card key={step} className="bg-background/30 border-glass-border/30">
                       <CardHeader className="pb-3">
@@ -372,7 +372,7 @@ const Index = () => {
               </div>
 
               {/* Right Column: Company Distribution and Communication Channels */}
-              <div className="space-y-6">
+              <div className="flex flex-col gap-6">
                 {/* Company Distribution Chart */}
                 <div className="glass-card p-6 rounded-xl">
                   <h3 className="text-lg font-semibold mb-4">Company Distribution</h3>
@@ -406,9 +406,9 @@ const Index = () => {
                 </div>
 
                 {/* Communication Channels */}
-                <div className="glass-card p-6 rounded-xl">
+                <div className="glass-card p-6 rounded-xl flex-1 flex flex-col">
                   <h3 className="text-lg font-semibold mb-4">Communication Channels</h3>
-                  <div className="space-y-4">
+                  <div className="space-y-4 flex-1">
                     {communicationChannels.map((channel) => (
                       <div key={channel.channel} className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
