@@ -173,25 +173,31 @@ const Index = () => {
               <div className="glass-card p-6 rounded-xl">
                 <h3 className="text-lg font-semibold mb-4">Company Distribution</h3>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={companyDistribution}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--glass-border))" opacity={0.3} />
-                    <XAxis dataKey="company" stroke="hsl(var(--muted-foreground))" angle={-15} textAnchor="end" height={80} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
+                  <PieChart>
+                    <Pie
+                      data={companyDistribution}
+                      dataKey="value"
+                      nameKey="company"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ company, value }) => `${company}: $${(value / 1000).toFixed(0)}k`}
+                      labelLine={true}
+                    >
+                      {companyDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
+                      ))}
+                    </Pie>
                     <Tooltip 
                       contentStyle={{ 
                         backgroundColor: "hsl(var(--glass))",
                         border: "1px solid hsl(var(--glass-border))",
                         borderRadius: "8px"
                       }}
-                      formatter={(value: number, name: string) => {
-                        if (name === 'value') return [`$${value.toLocaleString()}`, 'Deal Value'];
-                        return [value, 'Interactions'];
-                      }}
+                      formatter={(value: number) => [`$${value.toLocaleString()}`, 'Deal Value']}
                     />
                     <Legend />
-                    <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[8, 8, 0, 0]} name="Interactions" />
-                    <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[8, 8, 0, 0]} name="Deal Value" />
-                  </BarChart>
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
 
