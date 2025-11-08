@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bot, Filter, Users, DollarSign, Building2, Calendar, Mail, Phone } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
 
 const Index = () => {
@@ -143,6 +143,39 @@ const Index = () => {
     }
   ];
 
+  // Interaction frequency by date (last 7 days)
+  const interactionFrequency = (() => {
+    const allInteractions = [
+      ...interactionsData.map(i => ({ date: i.follow_up_date, type: 'voice' })),
+      ...emailsData.map(e => ({ 
+        date: new Date(new Date().setDate(new Date().getDate() - e.id)).toISOString().split('T')[0], 
+        type: 'email' 
+      }))
+    ];
+    
+    const grouped = allInteractions.reduce((acc, item) => {
+      const existing = acc.find(d => d.date === item.date);
+      if (existing) {
+        existing.total += 1;
+        if (item.type === 'email') existing.emails += 1;
+        if (item.type === 'voice') existing.calls += 1;
+      } else {
+        acc.push({
+          date: item.date,
+          total: 1,
+          emails: item.type === 'email' ? 1 : 0,
+          calls: item.type === 'voice' ? 1 : 0
+        });
+      }
+      return acc;
+    }, [] as { date: string; total: number; emails: number; calls: number }[]);
+    
+    return grouped.sort((a, b) => a.date.localeCompare(b.date)).map(item => ({
+      ...item,
+      dateFormatted: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }));
+  })();
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -214,6 +247,43 @@ const Index = () => {
                 value={companyDistribution.length}
                 icon={Building2}
               />
+            </div>
+
+            {/* Interaction Frequency Chart */}
+            <div className="glass-card p-6 rounded-xl col-span-2">
+              <h3 className="text-lg font-semibold mb-4">Recent Interaction Frequency</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={interactionFrequency}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--glass-border))" opacity={0.3} />
+                  <XAxis 
+                    dataKey="dateFormatted" 
+                    stroke="hsl(var(--muted-foreground))"
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    style={{ fontSize: '12px' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: "hsl(var(--glass))",
+                      border: "1px solid hsl(var(--glass-border))",
+                      borderRadius: "8px"
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="emails" fill="hsl(var(--chart-1))" name="Emails" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="calls" fill="hsl(var(--chart-2))" name="Voice Calls" radius={[4, 4, 0, 0]} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    name="Total Interactions"
+                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Charts and Views Grid */}
