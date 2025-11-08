@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Filter, Users, DollarSign, Building2, Calendar } from "lucide-react";
+import { Bot, Filter, Users, DollarSign, Building2, Calendar, Mail } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
 
@@ -67,6 +67,40 @@ const Index = () => {
       follow_up_date: "2025-11-14",
       notes: "Needs clarification on security protocols and data compliance.",
       interaction_medium: "phone call"
+    }
+  ];
+
+  // Mock email data
+  const emailsData = [
+    {
+      id: 1,
+      subject: "Follow-up to next steps",
+      from: "Tyler Li",
+      email: "tylerli.lwq@gmail.com",
+      time: "5:56 PM",
+      timeAgo: "7 minutes ago",
+      body: "Hello — thanks for the technical walkthrough on the phone this morning. For the next step, could we schedule a technical consultation with our security and compliance teams? We'd like to see architecture diagrams and any SOC/ISO docs you have. Follow-up: I'm aiming for Nov 14 to gather our questions and reconvene. Estimated deal value is roughly $95,000 based on scope we talked about. Notes: GlobalSoft needs more clarity on encryption at rest and data compliance before signing. — Lisa",
+      company: "GlobalSoft"
+    },
+    {
+      id: 2,
+      subject: "Re: Product Demo Request",
+      from: "Sarah Johnson",
+      email: "sjohnson@techcorp.com",
+      time: "2:30 PM",
+      timeAgo: "3 hours ago",
+      body: "Hi there, I wanted to follow up on our conversation from yesterday. Our team is very interested in seeing a full demo of the enterprise features. Could we schedule something for next week? We're particularly interested in the user management capabilities for 200+ users. Looking forward to hearing from you. Best regards, Sarah",
+      company: "TechCorp Inc"
+    },
+    {
+      id: 3,
+      subject: "Integration Requirements Discussion",
+      from: "Michael Chen",
+      email: "m.chen@dataflow.io",
+      time: "11:15 AM",
+      timeAgo: "6 hours ago",
+      body: "Thanks for the detailed walkthrough of your API capabilities. Our engineering team reviewed the documentation and we're impressed with the flexibility. We'd like to move forward with a proposal. Can you send over pricing for 150 seats with full API access? Timeline: We're looking to implement by Q1 2026. Deal value estimated at $75,000 annually.",
+      company: "DataFlow Systems"
     }
   ];
 
@@ -139,6 +173,7 @@ const Index = () => {
           <TabsList className="glass-card mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="interactions">Interactions Data</TabsTrigger>
+            <TabsTrigger value="emails">Emails</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -297,6 +332,41 @@ const Index = () => {
                   </TableBody>
                 </Table>
               </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="emails">
+            <div className="space-y-4">
+              {emailsData.map((email) => (
+                <Card key={email.id} className="glass-card border-glass-border/30">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-semibold mb-2">{email.subject}</CardTitle>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="w-4 h-4" />
+                          <span className="font-medium">{email.from}</span>
+                          <span className="text-xs">&lt;{email.email}&gt;</span>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p>{email.time}</p>
+                        <p className="text-xs">({email.timeAgo})</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-3">
+                      <Badge variant="secondary" className="text-xs">
+                        {email.company}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
+                      {email.body}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         </Tabs>
