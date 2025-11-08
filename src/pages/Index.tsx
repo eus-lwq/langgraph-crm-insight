@@ -1,14 +1,8 @@
-import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
-import { TopBar } from "@/components/TopBar";
-import { AIAssistant } from "@/components/AIAssistant";
 import { StatCard } from "@/components/StatCard";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
 
 const Index = () => {
-  const [showAI, setShowAI] = useState(true);
-
   const funnelData = [
     { stage: "Qualification", value: 16, fill: "hsl(var(--chart-1))" },
     { stage: "Presentation", value: 9, fill: "hsl(var(--chart-2))" },
@@ -51,12 +45,8 @@ const Index = () => {
         <div className="absolute inset-0 bg-background/40 backdrop-blur-sm"></div>
       </div>
 
-      <Sidebar />
-      <TopBar onAIClick={() => setShowAI(!showAI)} />
-      {showAI && <AIAssistant onClose={() => setShowAI(false)} />}
-
       {/* Main Content */}
-      <main className={`relative z-10 ml-40 mt-14 p-8 transition-all ${showAI ? 'mr-96' : 'mr-0'}`}>
+      <main className="relative z-10 p-8 max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <p className="text-sm text-muted-foreground mb-1">{getTime()}</p>
