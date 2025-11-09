@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Filter, Users, DollarSign, Building2, Calendar as CalendarIcon, CalendarDays, Mail, Clock, Phone } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
+import { Bot, Filter, Users, DollarSign, Building2, Calendar as CalendarIcon, Mail, Phone } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
 import { getInteractions, type Interaction, getCalendarEvents, type CalendarEvent, getEmails, type Email, getInteractionFrequency, type InteractionFrequency, getInteractionMethods, type InteractionMethod } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -19,7 +20,7 @@ import { format, formatDistanceToNow } from "date-fns";
 const Index = () => {
   const [showAI, setShowAI] = useState(true);
   const [filterText, setFilterText] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   // Fetch real data from backend (real-time sync every 1 second)
   const { data: interactionsData = [], isLoading, error } = useQuery<Interaction[]>({
@@ -66,6 +67,40 @@ const Index = () => {
     retryDelay: 1000,
   });
 
+  // Mock email data
+  const emailsData = [
+    {
+      id: 1,
+      subject: "Follow-up to next steps",
+      from: "Tyler Li",
+      email: "tylerli.lwq@gmail.com",
+      time: "5:56 PM",
+      timeAgo: "7 minutes ago",
+      body: "Hello — thanks for the technical walkthrough on the phone this morning. For the next step, could we schedule a technical consultation with our security and compliance teams? We'd like to see architecture diagrams and any SOC/ISO docs you have. Follow-up: I'm aiming for Nov 14 to gather our questions and reconvene. Estimated deal value is roughly $95,000 based on scope we talked about. Notes: GlobalSoft needs more clarity on encryption at rest and data compliance before signing. — Lisa",
+      company: "GlobalSoft"
+    },
+    {
+      id: 2,
+      subject: "Re: Product Demo Request",
+      from: "Sarah Johnson",
+      email: "sjohnson@techcorp.com",
+      time: "2:30 PM",
+      timeAgo: "3 hours ago",
+      body: "Hi there, I wanted to follow up on our conversation from yesterday. Our team is very interested in seeing a full demo of the enterprise features. Could we schedule something for next week? We're particularly interested in the user management capabilities for 200+ users. Looking forward to hearing from you. Best regards, Sarah",
+      company: "TechCorp Inc"
+    },
+    {
+      id: 3,
+      subject: "Integration Requirements Discussion",
+      from: "Michael Chen",
+      email: "m.chen@dataflow.io",
+      time: "11:15 AM",
+      timeAgo: "6 hours ago",
+      body: "Thanks for the detailed walkthrough of your API capabilities. Our engineering team reviewed the documentation and we're impressed with the flexibility. We'd like to move forward with a proposal. Can you send over pricing for 150 seats with full API access? Timeline: We're looking to implement by Q1 2026. Deal value estimated at $75,000 annually.",
+      company: "DataFlow Systems"
+    }
+  ];
+
   // Calculate metrics from interactions data
   const totalCustomers = interactionsData.length;
   const totalDealValue = interactionsData.reduce((sum, item) => sum + (item.deal_value || 0), 0);
@@ -92,6 +127,100 @@ const Index = () => {
     acc[step].push(item);
     return acc;
   }, {} as Record<string, Interaction[]>);
+
+  // Communication channels breakdown
+  const communicationChannels = [
+    { 
+      channel: "Email", 
+      count: emailsData.length,
+      percentage: Math.round((emailsData.length / (emailsData.length + interactionsData.length)) * 100)
+    },
+    { 
+      channel: "Voice Call", 
+      count: interactionsData.filter(i => i.interaction_medium === "phone call").length,
+      percentage: Math.round((interactionsData.filter(i => i.interaction_medium === "phone call").length / (emailsData.length + interactionsData.length)) * 100)
+    }
+  ];
+
+  // Interaction frequency by date (last 7 days)
+  const interactionFrequency = (() => {
+    const allInteractions = [
+      ...interactionsData.map(i => ({ date: i.follow_up_date, type: 'voice' })),
+      ...emailsData.map(e => ({ 
+        date: new Date(new Date().setDate(new Date().getDate() - e.id)).toISOString().split('T')[0], 
+        type: 'email' 
+      }))
+    ];
+    
+    const grouped = allInteractions.reduce((acc, item) => {
+      const existing = acc.find(d => d.date === item.date);
+      if (existing) {
+        existing.total += 1;
+        if (item.type === 'email') existing.emails += 1;
+        if (item.type === 'voice') existing.calls += 1;
+      } else {
+        acc.push({
+          date: item.date,
+          total: 1,
+          emails: item.type === 'email' ? 1 : 0,
+          calls: item.type === 'voice' ? 1 : 0
+        });
+      }
+      return acc;
+    }, [] as { date: string; total: number; emails: number; calls: number }[]);
+    
+    return grouped.sort((a, b) => a.date.localeCompare(b.date)).map(item => ({
+      ...item,
+      dateFormatted: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }));
+  })();
+
+  // Get events for a specific date
+  const getEventsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const events = [];
+    
+    // Add interactions
+    interactionsData.forEach(interaction => {
+      if (interaction.follow_up_date === dateStr) {
+        events.push({
+          type: 'interaction',
+          title: interaction.next_step,
+          contact: interaction.contact_name,
+          company: interaction.company,
+          value: interaction.deal_value,
+          medium: interaction.interaction_medium
+        });
+      }
+    });
+    
+    // Add emails
+    emailsData.forEach(email => {
+      const emailDate = new Date(new Date().setDate(new Date().getDate() - email.id)).toISOString().split('T')[0];
+      if (emailDate === dateStr) {
+        events.push({
+          type: 'email',
+          title: email.subject,
+          contact: email.from,
+          company: email.company,
+          email: email.email
+        });
+      }
+    });
+    
+    return events;
+  };
+
+  // Get dates that have events
+  const eventDates = (() => {
+    const dates = new Set<string>();
+    interactionsData.forEach(i => dates.add(i.follow_up_date));
+    emailsData.forEach(e => {
+      const emailDate = new Date(new Date().setDate(new Date().getDate() - e.id)).toISOString().split('T')[0];
+      dates.add(emailDate);
+    });
+    return Array.from(dates).map(d => new Date(d));
+  })();
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -138,7 +267,6 @@ const Index = () => {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="interactions">Interactions Data</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
-            <TabsTrigger value="emails">Emails</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -165,6 +293,43 @@ const Index = () => {
                 value={companyDistribution.length}
                 icon={Building2}
               />
+            </div>
+
+            {/* Interaction Frequency Chart */}
+            <div className="glass-card p-6 rounded-xl col-span-2">
+              <h3 className="text-lg font-semibold mb-4">Recent Interaction Frequency</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <ComposedChart data={interactionFrequency}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--glass-border))" opacity={0.3} />
+                  <XAxis 
+                    dataKey="dateFormatted" 
+                    stroke="hsl(var(--muted-foreground))"
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis 
+                    stroke="hsl(var(--muted-foreground))"
+                    style={{ fontSize: '12px' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: "hsl(var(--glass))",
+                      border: "1px solid hsl(var(--glass-border))",
+                      borderRadius: "8px"
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="emails" fill="hsl(var(--chart-1))" name="Emails" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="calls" fill="hsl(var(--chart-2))" name="Voice Calls" radius={[4, 4, 0, 0]} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2}
+                    name="Total Interactions"
+                    dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
             </div>
 
             {/* Charts and Views Grid */}
@@ -265,42 +430,10 @@ const Index = () => {
 
             {/* Second Row: Company Distribution and Next Steps */}
             <div className="grid grid-cols-2 gap-6">
-              {/* Company Distribution Chart */}
-              <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">Company Distribution</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={companyDistribution}
-                      dataKey="value"
-                      nameKey="company"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      label={({ company, value }) => `${company}: $${(value / 1000).toFixed(0)}k`}
-                      labelLine={true}
-                    >
-                      {companyDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--glass))",
-                        border: "1px solid hsl(var(--glass-border))",
-                        borderRadius: "8px"
-                      }}
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, 'Deal Value']}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Next Steps - Ticket View */}
+              {/* Next Steps - Ticket View (Fixed height) */}
               <div className="glass-card p-6 rounded-xl">
                 <h3 className="text-lg font-semibold mb-4">Next Steps</h3>
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                   {Object.entries(nextStepGroups).map(([step, items]) => (
                     <Card key={step} className="bg-background/30 border-glass-border/30">
                       <CardHeader className="pb-3">
@@ -320,7 +453,7 @@ const Index = () => {
                               <p className="font-semibold text-primary">${((item.deal_value || 0) / 1000).toFixed(0)}k</p>
                               <p className="text-muted-foreground flex items-center gap-1">
                                 <CalendarIcon className="w-3 h-3" />
-                                {item.follow_up_date ? new Date(item.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "N/A"}
+                                {new Date(item.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </p>
                             </div>
                           </div>
@@ -330,8 +463,182 @@ const Index = () => {
                   ))}
                 </div>
               </div>
+
+              {/* Right Column: Company Distribution and Communication Channels */}
+              <div className="space-y-6">
+                {/* Company Distribution Chart */}
+                <div className="glass-card p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-4">Company Distribution</h3>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={companyDistribution}
+                        dataKey="value"
+                        nameKey="company"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        label={({ company, value }) => `${company}: $${(value / 1000).toFixed(0)}k`}
+                        labelLine={true}
+                      >
+                        {companyDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${(index % 5) + 1}))`} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--glass))",
+                          border: "1px solid hsl(var(--glass-border))",
+                          borderRadius: "8px"
+                        }}
+                        formatter={(value: number) => [`$${value.toLocaleString()}`, 'Deal Value']}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Communication Channels */}
+                <div className="glass-card p-6 rounded-xl">
+                  <h3 className="text-lg font-semibold mb-4">Communication Channels</h3>
+                  <div className="space-y-4">
+                    {communicationChannels.map((channel) => (
+                      <div key={channel.channel} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            {channel.channel === "Email" ? (
+                              <Mail className="w-4 h-4 text-primary" />
+                            ) : (
+                              <Phone className="w-4 h-4 text-primary" />
+                            )}
+                            <span className="font-medium">{channel.channel}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-muted-foreground">{channel.count} contacts</span>
+                            <Badge variant="secondary">{channel.percentage}%</Badge>
+                          </div>
+                        </div>
+                        <div className="w-full bg-background/30 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="bg-primary h-full rounded-full transition-all"
+                            style={{ width: `${channel.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Emails Section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" />
+                Recent Emails
+              </h3>
+              {emailsData.map((email) => (
+                <Card key={email.id} className="glass-card border-glass-border/30">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-semibold mb-2">{email.subject}</CardTitle>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Mail className="w-4 h-4" />
+                          <span className="font-medium">{email.from}</span>
+                          <span className="text-xs">&lt;{email.email}&gt;</span>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <p>{email.time}</p>
+                        <p className="text-xs">({email.timeAgo})</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="mb-3">
+                      <Badge variant="secondary" className="text-xs">
+                        {email.company}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
+                      {email.body}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
+
+          <TabsContent value="calendar">
+            <div className="grid grid-cols-3 gap-6">
+              <div className="glass-card p-6 rounded-xl col-span-2">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <CalendarIcon className="w-5 h-5 text-primary" />
+                  Calendar
+                </h3>
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  className="rounded-md border-0"
+                  modifiers={{
+                    hasEvent: eventDates
+                  }}
+                  modifiersStyles={{
+                    hasEvent: {
+                      textDecoration: 'underline',
+                      textDecorationColor: 'hsl(var(--primary))',
+                      textDecorationThickness: '2px'
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Events for Selected Date */}
+              <div className="glass-card p-6 rounded-xl">
+                <h3 className="text-lg font-semibold mb-4">
+                  {selectedDate ? (
+                    <>Events on {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</>
+                  ) : (
+                    'Select a date'
+                  )}
+                </h3>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  {selectedDate && getEventsForDate(selectedDate).length > 0 ? (
+                    getEventsForDate(selectedDate).map((event, idx) => (
+                      <Card key={idx} className="bg-background/30 border-glass-border/30">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-2 mb-2">
+                            {event.type === 'email' ? (
+                              <Mail className="w-4 h-4 text-primary mt-0.5" />
+                            ) : (
+                              <Phone className="w-4 h-4 text-primary mt-0.5" />
+                            )}
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{event.title}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{event.contact}</p>
+                              <p className="text-xs text-muted-foreground">{event.company}</p>
+                              {event.type === 'interaction' && (
+                                <p className="text-xs font-semibold text-primary mt-2">
+                                  ${((event as any).value / 1000).toFixed(0)}k
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No events scheduled for this date
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
 
           <TabsContent value="interactions">
             <div className="glass-card p-6 rounded-xl">
@@ -417,238 +724,7 @@ const Index = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="calendar" className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
-              {/* Calendar Component */}
-              <div className="glass-card p-6 rounded-xl">
-                <div className="flex items-center gap-2 mb-4">
-                  <CalendarDays className="w-5 h-5" />
-                  <h3 className="text-lg font-semibold">Calendar</h3>
-                </div>
-                {eventsLoading && (
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <p className="text-sm text-muted-foreground">Loading calendar events...</p>
-                  </div>
-                )}
-                {eventsError && (
-                  <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-sm text-destructive">Error loading calendar: {String(eventsError)}</p>
-                  </div>
-                )}
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  className="rounded-md border"
-                  modifiers={{
-                    hasEvents: (date) => {
-                      const dateStr = format(date, "yyyy-MM-dd");
-                      return calendarEvents.some(event => {
-                        const eventDate = new Date(event.start);
-                        return format(eventDate, "yyyy-MM-dd") === dateStr;
-                      });
-                    }
-                  }}
-                  modifiersClassNames={{
-                    hasEvents: "underline underline-offset-2 decoration-2 decoration-primary"
-                  }}
-                />
-              </div>
 
-              {/* Events for Selected Date */}
-              <div className="glass-card p-6 rounded-xl">
-                <h3 className="text-lg font-semibold mb-4">
-                  Events on {format(selectedDate, "MMM d, yyyy")}
-                </h3>
-                {eventsLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <p className="text-sm text-muted-foreground">Loading events...</p>
-                  </div>
-                ) : eventsError ? (
-                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-sm text-destructive">Error: {String(eventsError)}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {(() => {
-                      const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-                      const dayEvents = calendarEvents.filter(event => {
-                        const eventDate = new Date(event.start);
-                        const eventDateStr = format(eventDate, "yyyy-MM-dd");
-                        return eventDateStr === selectedDateStr;
-                      });
-
-                      if (dayEvents.length === 0) {
-                        return (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <CalendarIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                            <p>No events scheduled for this date</p>
-                          </div>
-                        );
-                      }
-
-                      return dayEvents.map((event) => {
-                        const startTime = new Date(event.start);
-                        const endTime = new Date(event.end);
-                        return (
-                          <Card key={event.id} className="bg-background/30 border-glass-border/30">
-                            <CardHeader className="pb-3">
-                              <CardTitle className="text-sm font-medium">{event.summary}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2 text-sm">
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <CalendarIcon className="w-4 h-4" />
-                                <span>
-                                  {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
-                                </span>
-                              </div>
-                              {event.location && (
-                                <div className="text-muted-foreground">
-                                  📍 {event.location}
-                                </div>
-                              )}
-                              {event.description && (
-                                <p className="text-muted-foreground text-xs mt-2">{event.description}</p>
-                              )}
-                              {event.attendees && event.attendees.length > 0 && (
-                                <div className="text-muted-foreground text-xs">
-                                  👥 {event.attendees.length} attendee{event.attendees.length > 1 ? 's' : ''}
-                                </div>
-                              )}
-                              {event.html_link && (
-                                <a
-                                  href={event.html_link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-primary hover:underline"
-                                >
-                                  Open in Google Calendar →
-                                </a>
-                              )}
-                            </CardContent>
-                          </Card>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="emails" className="space-y-6">
-            <div className="glass-card p-6 rounded-xl">
-              <div className="flex items-center gap-2 mb-6">
-                <Mail className="w-5 h-5" />
-                <h2 className="text-2xl font-bold">Recent Emails</h2>
-              </div>
-              
-              {emailsLoading && (
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                  <p className="text-muted-foreground">Loading emails from Gmail...</p>
-                </div>
-              )}
-              
-              {emailsError && (
-                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <p className="text-destructive font-semibold mb-1">Error loading emails:</p>
-                  <p className="text-destructive text-sm">{String(emailsError)}</p>
-                  <p className="text-muted-foreground text-xs mt-2">
-                    Make sure the backend server is running on http://localhost:8001
-                  </p>
-                </div>
-              )}
-              
-              {!emailsLoading && !emailsError && emails.length === 0 && (
-                <div className="mb-4 p-4 bg-muted/50 border border-muted rounded-lg">
-                  <p className="text-muted-foreground">No emails found.</p>
-                </div>
-              )}
-              
-              <div className="space-y-4">
-                {emails.map((email) => {
-                  const emailDate = new Date(email.date);
-                  const timeAgo = formatDistanceToNow(emailDate, { addSuffix: true });
-                  
-                  return (
-                    <Card key={email.id} className="bg-background/30 border-glass-border/30">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <CardTitle className="text-base font-semibold mb-2">{email.subject}</CardTitle>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                              <span className="font-medium">{email.from_email}</span>
-                              <span>•</span>
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>{timeAgo}</span>
-                              </div>
-                            </div>
-                            {email.extracted_data?.company && (
-                              <Badge variant="secondary" className="mt-1">
-                                {email.extracted_data.company}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="text-sm text-muted-foreground">
-                          <p className="line-clamp-3">{email.body.substring(0, 200)}...</p>
-                        </div>
-                        {email.extracted_data && (
-                          <div className="pt-3 border-t border-glass-border/30 space-y-2">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase">Extracted Data:</p>
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              {email.extracted_data.contact_name && (
-                                <div>
-                                  <span className="text-muted-foreground">Contact: </span>
-                                  <span className="font-medium">{email.extracted_data.contact_name}</span>
-                                </div>
-                              )}
-                              {email.extracted_data.company && (
-                                <div>
-                                  <span className="text-muted-foreground">Company: </span>
-                                  <span className="font-medium">{email.extracted_data.company}</span>
-                                </div>
-                              )}
-                              {email.extracted_data.deal_value && (
-                                <div>
-                                  <span className="text-muted-foreground">Deal Value: </span>
-                                  <span className="font-medium">${email.extracted_data.deal_value.toLocaleString()}</span>
-                                </div>
-                              )}
-                              {email.extracted_data.follow_up_date && (
-                                <div>
-                                  <span className="text-muted-foreground">Follow-up: </span>
-                                  <span className="font-medium">{email.extracted_data.follow_up_date}</span>
-                                </div>
-                              )}
-                            </div>
-                            {email.extracted_data.next_step && (
-                              <div className="mt-2">
-                                <span className="text-muted-foreground text-xs">Next Step: </span>
-                                <span className="font-medium text-xs">{email.extracted_data.next_step}</span>
-                              </div>
-                            )}
-                            {email.extracted_data.notes && (
-                              <div className="mt-2">
-                                <span className="text-muted-foreground text-xs">Notes: </span>
-                                <span className="text-xs">{email.extracted_data.notes}</span>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          </TabsContent>
         </Tabs>
       </main>
     </div>
