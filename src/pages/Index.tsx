@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StatCard } from "@/components/StatCard";
 import { AIAssistant } from "@/components/AIAssistant";
 import { Button } from "@/components/ui/button";
@@ -12,65 +12,60 @@ import { Bot, Filter, Users, DollarSign, Building2, Calendar as CalendarIcon, Ma
 import { Calendar } from "@/components/ui/calendar";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, ComposedChart } from "recharts";
 import bgMountains from "@/assets/bg-mountains.jpg";
+import { getInteractions, type Interaction, getCalendarEvents, type CalendarEvent, getEmails, type Email, getInteractionFrequency, type InteractionFrequency, getInteractionMethods, type InteractionMethod } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar } from "@/components/ui/calendar";
+import { format, formatDistanceToNow } from "date-fns";
 
 const Index = () => {
   const [showAI, setShowAI] = useState(true);
   const [filterText, setFilterText] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
-  // Mock BigQuery data
-  const interactionsData = [
-    {
-      id: 1,
-      contact_name: "Sarah Johnson",
-      company: "TechCorp Inc",
-      next_step: "Schedule product demo",
-      deal_value: 50000,
-      follow_up_date: "2025-11-15",
-      notes: "Interested in enterprise plan. Needs pricing for 200+ users.",
-      interaction_medium: "phone call"
-    },
-    {
-      id: 2,
-      contact_name: "Michael Chen",
-      company: "DataFlow Systems",
-      next_step: "Send proposal",
-      deal_value: 75000,
-      follow_up_date: "2025-11-12",
-      notes: "Discussed integration requirements. Very positive about API capabilities.",
-      interaction_medium: "phone call"
-    },
-    {
-      id: 3,
-      contact_name: "Emily Rodriguez",
-      company: "CloudScale Ltd",
-      next_step: "Contract review",
-      deal_value: 120000,
-      follow_up_date: "2025-11-20",
-      notes: "Legal team reviewing terms. Expects to close by end of month.",
-      interaction_medium: "phone call"
-    },
-    {
-      id: 4,
-      contact_name: "David Park",
-      company: "InnovateTech",
-      next_step: "Follow-up call",
-      deal_value: 35000,
-      follow_up_date: "2025-11-18",
-      notes: "Comparing with competitors. Price-sensitive but likes features.",
-      interaction_medium: "phone call"
-    },
-    {
-      id: 5,
-      contact_name: "Lisa Anderson",
-      company: "GlobalSoft",
-      next_step: "Technical consultation",
-      deal_value: 95000,
-      follow_up_date: "2025-11-14",
-      notes: "Needs clarification on security protocols and data compliance.",
-      interaction_medium: "phone call"
-    }
-  ];
+  // Fetch real data from backend (real-time sync every 1 second)
+  const { data: interactionsData = [], isLoading, error } = useQuery<Interaction[]>({
+    queryKey: ["interactions"],
+    queryFn: () => getInteractions(50),
+    refetchInterval: 1000, // Refetch every 1 second for real-time sync
+    retry: 2, // Retry failed requests
+    retryDelay: 1000, // Wait 1 second between retries
+  });
+
+  // Fetch calendar events from backend
+  const { data: calendarEvents = [], isLoading: eventsLoading, error: eventsError } = useQuery<CalendarEvent[]>({
+    queryKey: ["calendar-events"],
+    queryFn: () => getCalendarEvents(50),
+    refetchInterval: 60000, // Refetch every 60 seconds
+    retry: 2,
+    retryDelay: 1000,
+  });
+
+  // Fetch emails from backend (real-time sync)
+  const { data: emails = [], isLoading: emailsLoading, error: emailsError } = useQuery<Email[]>({
+    queryKey: ["emails"],
+    queryFn: () => getEmails(20),
+    refetchInterval: 1000, // Refetch every 1 second for real-time sync (backend syncs every 1s)
+    retry: 2,
+    retryDelay: 1000,
+  });
+
+  // Fetch interaction frequency data (real-time sync) - Extended to 90 days for more activity
+  const { data: frequencyData = [], isLoading: frequencyLoading } = useQuery<InteractionFrequency[]>({
+    queryKey: ["interaction-frequency"],
+    queryFn: () => getInteractionFrequency(90), // Increased from 30 to 90 days
+    refetchInterval: 1000, // Refetch every 1 second for real-time sync
+    retry: 2,
+    retryDelay: 1000,
+  });
+
+  // Fetch interaction methods data (real-time sync)
+  const { data: methodData = [], isLoading: methodsLoading } = useQuery<InteractionMethod[]>({
+    queryKey: ["interaction-methods"],
+    queryFn: () => getInteractionMethods(),
+    refetchInterval: 1000, // Refetch every 1 second for real-time sync
+    retry: 2,
+    retryDelay: 1000,
+  });
 
   // Mock email data
   const emailsData = [
@@ -108,28 +103,30 @@ const Index = () => {
 
   // Calculate metrics from interactions data
   const totalCustomers = interactionsData.length;
-  const totalDealValue = interactionsData.reduce((sum, item) => sum + item.deal_value, 0);
+  const totalDealValue = interactionsData.reduce((sum, item) => sum + (item.deal_value || 0), 0);
   
   // Company distribution data
   const companyDistribution = interactionsData.reduce((acc, item) => {
+    if (!item.company) return acc;
     const existing = acc.find(c => c.company === item.company);
     if (existing) {
       existing.count += 1;
-      existing.value += item.deal_value;
+      existing.value += (item.deal_value || 0);
     } else {
-      acc.push({ company: item.company, count: 1, value: item.deal_value });
+      acc.push({ company: item.company, count: 1, value: (item.deal_value || 0) });
     }
     return acc;
   }, [] as { company: string; count: number; value: number }[]);
 
   // Group by next step for ticket view
   const nextStepGroups = interactionsData.reduce((acc, item) => {
-    if (!acc[item.next_step]) {
-      acc[item.next_step] = [];
+    const step = item.next_step || "No next step";
+    if (!acc[step]) {
+      acc[step] = [];
     }
-    acc[item.next_step].push(item);
+    acc[step].push(item);
     return acc;
-  }, {} as Record<string, typeof interactionsData>);
+  }, {} as Record<string, Interaction[]>);
 
   // Communication channels breakdown
   const communicationChannels = [
@@ -336,6 +333,102 @@ const Index = () => {
             </div>
 
             {/* Charts and Views Grid */}
+            <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* Recent Interaction Frequency Chart - Fixed position */}
+              <div className="glass-card p-6 rounded-xl order-1">
+                <h3 className="text-lg font-semibold mb-4">Recent Interaction Frequency</h3>
+                {frequencyLoading ? (
+                  <div className="flex items-center justify-center h-[300px]">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : frequencyData.length === 0 ? (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    <p>No interaction data available</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={frequencyData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                      <XAxis 
+                        dataKey="date" 
+                        tickFormatter={(date) => format(new Date(date), "MMM d")}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: "hsl(var(--glass))",
+                          border: "1px solid hsl(var(--glass-border))",
+                          borderRadius: "8px"
+                        }}
+                        labelFormatter={(date) => format(new Date(date), "MMM d, yyyy")}
+                      />
+                      <Legend />
+                      <Bar dataKey="emails" fill="hsl(var(--chart-1))" name="Emails" />
+                      <Bar dataKey="voice_calls" fill="hsl(var(--chart-2))" name="Voice Calls" />
+                      <Line 
+                        type="monotone" 
+                        dataKey="total" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        name="Total Interactions"
+                        dot={{ fill: "hsl(var(--primary))", r: 4 }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+
+              {/* Interaction Method Component - Fixed position */}
+              <div className="glass-card p-6 rounded-xl order-2">
+                <h3 className="text-lg font-semibold mb-4">Communication Channels</h3>
+                {methodsLoading ? (
+                  <div className="flex items-center justify-center h-[300px]">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  </div>
+                ) : methodData.length === 0 ? (
+                  <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                    <p>No interaction method data available</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {methodData
+                      .slice()
+                      .sort((a, b) => b.contacts - a.contacts) // Sort by contacts descending for stable order
+                      .map((method, index) => (
+                      <div key={`${method.method}-${index}`} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {method.method === "Email" ? (
+                              <Mail className="w-5 h-5 text-muted-foreground" />
+                            ) : method.method === "Voice Call" ? (
+                              <Phone className="w-5 h-5 text-muted-foreground" />
+                            ) : (
+                              <Users className="w-5 h-5 text-muted-foreground" />
+                            )}
+                            <span className="font-medium">{method.method}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-muted-foreground">{method.contacts} contacts</span>
+                            <Badge variant="secondary" className="text-xs">
+                              {method.percentage}%
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="w-full bg-muted/30 rounded-full h-2">
+                          <div 
+                            className="bg-primary rounded-full h-2 transition-all"
+                            style={{ width: `${method.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Second Row: Company Distribution and Next Steps */}
             <div className="grid grid-cols-2 gap-6">
               {/* Next Steps - Ticket View (Fixed height) */}
               <div className="glass-card p-6 rounded-xl">
@@ -353,11 +446,11 @@ const Index = () => {
                         {items.map((item) => (
                           <div key={item.id} className="flex items-start justify-between text-xs p-2 rounded bg-background/20">
                             <div className="flex-1">
-                              <p className="font-medium">{item.contact_name}</p>
-                              <p className="text-muted-foreground">{item.company}</p>
+                              <p className="font-medium">{item.contact_name || "N/A"}</p>
+                              <p className="text-muted-foreground">{item.company || "N/A"}</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-primary">${(item.deal_value / 1000).toFixed(0)}k</p>
+                              <p className="font-semibold text-primary">${((item.deal_value || 0) / 1000).toFixed(0)}k</p>
                               <p className="text-muted-foreground flex items-center gap-1">
                                 <CalendarIcon className="w-3 h-3" />
                                 {new Date(item.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -549,6 +642,27 @@ const Index = () => {
 
           <TabsContent value="interactions">
             <div className="glass-card p-6 rounded-xl">
+              {isLoading && (
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <p className="text-muted-foreground">Loading interactions from BigQuery...</p>
+                </div>
+              )}
+              {error && (
+                <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                  <p className="text-destructive font-semibold mb-1">Error loading interactions:</p>
+                  <p className="text-destructive text-sm">{String(error)}</p>
+                  <p className="text-muted-foreground text-xs mt-2">
+                    Make sure the backend server is running on http://localhost:8001
+                  </p>
+                </div>
+              )}
+              {!isLoading && !error && interactionsData.length === 0 && (
+                <div className="mb-4 p-4 bg-muted/50 border border-muted rounded-lg">
+                  <p className="text-muted-foreground">No interactions found in BigQuery.</p>
+                </div>
+              )}
+              
               {/* Filter */}
               <div className="flex items-center gap-3 mb-6">
                 <Filter className="w-5 h-5 text-muted-foreground" />
@@ -586,20 +700,20 @@ const Index = () => {
                           String(val).toLowerCase().includes(filterText.toLowerCase())
                         )
                       )
-                      .map((row) => (
-                        <TableRow key={row.id} className="border-glass-border/30 hover:bg-background/20">
+                      .map((row, idx) => (
+                        <TableRow key={row.id || idx} className="border-glass-border/30 hover:bg-background/20">
                           <TableCell>
                             <Checkbox />
                           </TableCell>
-                          <TableCell className="font-medium">{row.contact_name}</TableCell>
-                          <TableCell>{row.company}</TableCell>
-                          <TableCell>{row.next_step}</TableCell>
-                          <TableCell>${row.deal_value.toLocaleString()}</TableCell>
-                          <TableCell>{row.follow_up_date}</TableCell>
-                          <TableCell className="max-w-xs truncate">{row.notes}</TableCell>
+                          <TableCell className="font-medium">{row.contact_name || "N/A"}</TableCell>
+                          <TableCell>{row.company || "N/A"}</TableCell>
+                          <TableCell>{row.next_step || "N/A"}</TableCell>
+                          <TableCell>${(row.deal_value || 0).toLocaleString()}</TableCell>
+                          <TableCell>{row.follow_up_date || "N/A"}</TableCell>
+                          <TableCell className="max-w-xs truncate">{row.notes || "N/A"}</TableCell>
                           <TableCell>
                             <span className="px-2 py-1 rounded-full bg-primary/20 text-primary text-xs">
-                              {row.interaction_medium}
+                              {row.interaction_medium || "N/A"}
                             </span>
                           </TableCell>
                         </TableRow>
